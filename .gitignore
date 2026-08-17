@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+
+# Логи и журналы (личные данные, генерируются при запуске)
+organizer.log
+organizer_log.json
+
+# Системные файлы macOS
+.DS_Store
+
+# Виртуальное окружение (если будешь использовать)
+venv/
+.venv/
+
+# IDE
+.vscode/

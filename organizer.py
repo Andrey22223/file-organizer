@@ -1,0 +1,134 @@
+import json
+from pathlib import Path
+from datetime import datetime
+import logging
+import fnmatch
+
+logging.basicConfig(
+    filename="organizer.log",
+    level=logging.INFO,
+    format="%(asctime)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M"
+)
+
+def load_config(config_path=None):
+    if config_path is None:
+        config_path = Path(__file__).parent / "config.json"
+
+    with open(config_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def get_category(file_path, categories):
+    extension = Path(file_path).suffix.lower()
+
+    for category, extensions in categories.items():
+        if extension in extensions:
+            return category
+
+    return "Others"
+
+def scan_folder(folder_path, exclude_patterns=None):
+    folder = Path(folder_path)
+    exclude_patterns = exclude_patterns or []
+
+    files = []
+    for item in folder.iterdir():
+        if not item.is_file():
+            continue
+        if any(fnmatch.fnmatch(item.name, pattern) for pattern in exclude_patterns):
+            continue
+        files.append(item)
+
+    return files
+
+def build_plan(folder_path, config):
+    folder = Path(folder_path)
+    files = scan_folder(folder_path, config.get("exclude", []))
+
+    plan = []
+    for file in files:
+        category = get_category(file, config["categories"])
+        destination = folder / category / file.name
+        plan.append((file, destination))
+
+    return plan
+
+def print_plan(plan):
+    if not plan:
+        print("Файлов для организации не найдено.")
+        return
+
+    print("Будут перемещены:")
+    for source, destination in plan:
+        print(f"  {source.name} → {destination.parent.name}/")
+
+def resolve_conflict(destination):
+    if not destination.exists():
+        return destination
+
+    stem = destination.stem
+    suffix = destination.suffix
+    parent = destination.parent
+
+    counter = 1
+    new_destination = parent / f"{stem}_{counter}{suffix}"
+    while new_destination.exists():
+        counter += 1
+        new_destination = parent / f"{stem}_{counter}{suffix}"
+
+    return new_destination
+
+import shutil
+
+def organize(folder_path, config):
+    plan = build_plan(folder_path, config)
+    results = []
+
+    for source, destination in plan:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        final_destination = resolve_conflict(destination)
+        shutil.move(str(source), str(final_destination))
+        logging.info(f"{source.name} → {final_destination.parent.name}/")
+        results.append((source, final_destination))
+
+    return results
+
+def save_log(results, folder_path, log_path="organizer_log.json"):
+    log_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "folder": str(folder_path),
+        "moves": [
+            {"from": str(source), "to": str(destination)}
+            for source, destination in results
+        ]
+    }
+
+    with open(log_path, "w", encoding="utf-8") as f:
+        json.dump(log_entry, f, ensure_ascii=False, indent=2)
+
+def undo(log_path="organizer_log.json"):
+    if not Path(log_path).exists():
+        print("Файл журнала не найден. Нечего отменять.")
+        return
+
+    with open(log_path, "r", encoding="utf-8") as f:
+        log_entry = json.load(f)
+
+    moves = log_entry["moves"]
+
+    if not moves:
+        print("В последней организации не было перемещений.")
+        return
+
+    for move in moves:
+        source = Path(move["to"])
+        destination = Path(move["from"])
+
+        if source.exists():
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(source), str(destination))
+            print(f"  {source.name} возвращён обратно")
+        else:
+            print(f"  {source.name} не найден, пропускаем")
+
+    print(f"↩️ Undo завершён. Возвращено файлов: {len(moves)}")

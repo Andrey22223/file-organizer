@@ -1,0 +1,11 @@
+{
+  "categories": {
+    "Images": [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".heic"],
+    "Documents": [".pdf", ".docx", ".doc", ".txt", ".xlsx", ".xls", ".pptx", ".ppt", ".csv"],
+    "Videos": [".mp4", ".mov", ".avi", ".mkv", ".webm"],
+    "Archives": [".zip", ".rar", ".7z", ".tar", ".gz"],
+    "Installers": [".dmg", ".pkg", ".exe", ".msi"],
+    "Code": [".py", ".js", ".html", ".css", ".json", ".sh"]
+  },
+  "exclude": [".DS_Store", ".localized", "~$*"]
+}

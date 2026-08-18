@@ -3,6 +3,7 @@ from pathlib import Path
 from datetime import datetime
 import logging
 import fnmatch
+import shutil
 
 logging.basicConfig(
     filename="organizer.log",
@@ -78,8 +79,6 @@ def resolve_conflict(destination):
 
     return new_destination
 
-import shutil
-
 def organize(folder_path, config):
     plan = build_plan(folder_path, config)
     results = []
@@ -120,7 +119,10 @@ def undo(log_path="organizer_log.json"):
         print("В последней организации не было перемещений.")
         return
 
-    for move in moves:
+    restored = 0
+    skipped = 0
+
+    for move in reversed(moves):
         source = Path(move["to"])
         destination = Path(move["from"])
 
@@ -128,7 +130,9 @@ def undo(log_path="organizer_log.json"):
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(source), str(destination))
             print(f"  {source.name} возвращён обратно")
+            restored += 1
         else:
             print(f"  {source.name} не найден, пропускаем")
+            skipped += 1
 
-    print(f"↩️ Undo завершён. Возвращено файлов: {len(moves)}")
+    print(f"↩️ Undo завершён. Возвращено файлов: {restored}, пропущено: {skipped}")

@@ -17,7 +17,7 @@ CLI-утилита на Python, которая автоматически сор
 Требуется Python 3.9+. Дополнительных зависимостей нет — используются только стандартные библиотеки.
 
 ```bash
-git clone <ссылка-на-репозиторий>
+git clone <https://github.com/Andrey22223/file-organizer>
 cd file-organizer
 ```
 

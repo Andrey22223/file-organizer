@@ -90,14 +90,19 @@ def print_plan(plan):
 def organize(folder_path, config):
     plan = build_plan(folder_path, config)
     results = []
+    errors = []
 
     for source, final_destination in plan:
-        final_destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(source), str(final_destination))
-        logging.info(f"{source.name} → {final_destination.parent.name}/")
-        results.append((source, final_destination))
+        try:
+            final_destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(source), str(final_destination))
+            logging.info(f"{source.name} → {final_destination.parent.name}/")
+            results.append((source, final_destination))
+        except (OSError, shutil.Error) as e:
+            logging.error(f"Не удалось переместить {source.name}: {e}")
+            errors.append((source, str(e)))
 
-    return results
+    return results, errors
 
 def save_log(results, folder_path, log_path="organizer_log.json"):
     log_entry = {

@@ -49,17 +49,18 @@ def main():
         print_plan(plan)
         return
 
-    try:
-        results = organize(args.folder, config)
-    except PermissionError:
-        print("Ошибка: нет прав доступа к папке или файлам внутри неё.")
-        return
+    results, errors = organize(args.folder, config)
 
     save_log(results, args.folder)
 
     print(f"🗂 Организация завершена! Обработано файлов: {len(results)}")
     for source, destination in results:
         print(f"  {source.name} → {destination.parent.name}/{destination.name}")
+
+    if errors:
+        print(f"⚠️ Не удалось переместить: {len(errors)}")
+        for source, error in errors:
+            print(f"  {source.name}: {error}")
 
 if __name__ == "__main__":
     main()

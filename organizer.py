@@ -42,15 +42,36 @@ def scan_folder(folder_path, exclude_patterns=None):
 
     return files
 
+def resolve_conflict(destination, reserved=None):
+    reserved = reserved or set()
+
+    if not destination.exists() and destination not in reserved:
+        return destination
+
+    stem = destination.stem
+    suffix = destination.suffix
+    parent = destination.parent
+
+    counter = 1
+    new_destination = parent / f"{stem}_{counter}{suffix}"
+    while new_destination.exists() or new_destination in reserved:
+        counter += 1
+        new_destination = parent / f"{stem}_{counter}{suffix}"
+
+    return new_destination
+
 def build_plan(folder_path, config):
     folder = Path(folder_path)
     files = scan_folder(folder_path, config.get("exclude", []))
 
     plan = []
+    reserved = set()
     for file in files:
         category = get_category(file, config["categories"])
-        destination = folder / category / file.name
-        plan.append((file, destination))
+        raw_destination = folder / category / file.name
+        final_destination = resolve_conflict(raw_destination, reserved)
+        reserved.add(final_destination)
+        plan.append((file, final_destination))
 
     return plan
 
@@ -61,31 +82,17 @@ def print_plan(plan):
 
     print("Будут перемещены:")
     for source, destination in plan:
-        print(f"  {source.name} → {destination.parent.name}/")
-
-def resolve_conflict(destination):
-    if not destination.exists():
-        return destination
-
-    stem = destination.stem
-    suffix = destination.suffix
-    parent = destination.parent
-
-    counter = 1
-    new_destination = parent / f"{stem}_{counter}{suffix}"
-    while new_destination.exists():
-        counter += 1
-        new_destination = parent / f"{stem}_{counter}{suffix}"
-
-    return new_destination
+        if destination.name == source.name:
+            print(f"  {source.name} → {destination.parent.name}/")
+        else:
+            print(f"  {source.name} → {destination.parent.name}/{destination.name}")
 
 def organize(folder_path, config):
     plan = build_plan(folder_path, config)
     results = []
 
-    for source, destination in plan:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        final_destination = resolve_conflict(destination)
+    for source, final_destination in plan:
+        final_destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(source), str(final_destination))
         logging.info(f"{source.name} → {final_destination.parent.name}/")
         results.append((source, final_destination))
